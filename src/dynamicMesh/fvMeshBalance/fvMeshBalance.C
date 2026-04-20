@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "fvMeshBalance.H"
+#include "mappedPatchBase.H"
 #include "decompositionMethod.H"
 #include "addToRunTimeSelectionTable.H"
 #include "RefineBalanceMeshObject.H"
@@ -661,6 +662,35 @@ Foam::fvMeshBalance::distribute()
     correctBoundaries<pointSphericalTensorField>();
     correctBoundaries<pointSymmTensorField>();
     correctBoundaries<pointTensorField>();
+
+    // Invalidate the mapDistribute cache of any mappedWall (or other
+    // mappedPatchBase-derived) patches on OTHER regions that sample from
+    // this mesh.  Redistribution changes the processor layout so the cached
+    // map is stale; clearing it here forces a rebuild on the next evaluate().
+    {
+        const HashTable<const fvMesh*> meshes =
+            mesh_.time().lookupClass<fvMesh>();
+
+        forAllConstIter(HashTable<const fvMesh*>, meshes, mIter)
+        {
+            const fvMesh& otherMesh = *mIter();
+            if (&otherMesh == &mesh_) continue;
+
+            forAll(otherMesh.boundaryMesh(), patchi)
+            {
+                const polyPatch& pp = otherMesh.boundaryMesh()[patchi];
+                if (isA<mappedPatchBase>(pp))
+                {
+                    const mappedPatchBase& mpp =
+                        refCast<const mappedPatchBase>(pp);
+                    if (mpp.sampleRegion() == mesh_.name())
+                    {
+                        const_cast<mappedPatchBase&>(mpp).clearOut();
+                    }
+                }
+            }
+        }
+    }
 
     return map;
 }
