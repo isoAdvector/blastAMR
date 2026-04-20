@@ -189,12 +189,12 @@ void Foam::newCellCuts::syncProc()
                             if (isEdge(cuts[i]))
                             {
                                 label edgei = getEdge(cuts[i]);
-                                label index = findIndex(fEdges, edgei);
+                                label index = fEdges.find(edgei);
                                 relCuts[bFacei][i] = -index-1;
                             }
                             else
                             {
-                                label index = findIndex(f, getVertex(cuts[i]));
+                                label index = f.find(getVertex(cuts[i]));
                                 relCuts[bFacei][i] = index+1;
                             }
                         }
@@ -392,8 +392,8 @@ Foam::label Foam::newCellCuts::edgeEdgeToFace
 
         if
         (
-            findIndex(fEdges, edgeA) != -1
-         && findIndex(fEdges, edgeB) != -1
+            fEdges.find(edgeA) != -1
+         && fEdges.find(edgeB) != -1
         )
         {
            return facei;
@@ -434,8 +434,8 @@ Foam::label Foam::newCellCuts::edgeVertexToFace
 
         if
         (
-            findIndex(fEdges, edgeI) != -1
-         && findIndex(f, vertI) != -1
+            fEdges.find(edgeI) != -1
+         && f.find(vertI) != -1
         )
         {
            return facei;
@@ -471,8 +471,8 @@ Foam::label Foam::newCellCuts::vertexVertexToFace
 
         if
         (
-            findIndex(f, vertA) != -1
-         && findIndex(f, vertB) != -1
+            f.find(vertA) != -1
+         && f.find(vertB) != -1
         )
         {
            return facei;
@@ -677,7 +677,7 @@ Foam::label Foam::newCellCuts::loopFace
 
             if (isEdge(cut))
             {
-                if (findIndex(fEdges, getEdge(cut)) == -1)
+                if (fEdges.find(getEdge(cut)) == -1)
                 {
                     // Edge not on face. Skip face.
                     allOnFace = false;
@@ -686,7 +686,7 @@ Foam::label Foam::newCellCuts::loopFace
             }
             else
             {
-                if (findIndex(f, getVertex(cut)) == -1)
+                if (f.find(getVertex(cut)) == -1)
                 {
                     // Vertex not on face. Skip face.
                     allOnFace = false;
@@ -1333,8 +1333,8 @@ Foam::labelList Foam::newCellCuts::nonAnchorPoints
 
         if
         (
-            findIndex(anchorPoints, pointi) == -1
-         && findIndex(loop, vertToEVert(pointi)) == -1
+            anchorPoints.find(pointi) == -1
+         && loop.find(vertToEVert(pointi)) == -1
         )
         {
             newElems[newElemI++] = pointi;
@@ -1824,7 +1824,7 @@ Foam::label Foam::newCellCuts::countFaceCuts
         if
         (
             pointIsCut_[vertI]
-         || (findIndex(loop, vertToEVert(vertI)) != -1)
+         || (loop.find(vertToEVert(vertI)) != -1)
         )
         {
             nCuts++;
@@ -1842,7 +1842,7 @@ Foam::label Foam::newCellCuts::countFaceCuts
         if
         (
             edgeIsCut_[edgeI]
-         || (findIndex(loop, edgeToEVert(edgeI)) != -1)
+         || (loop.find(edgeToEVert(edgeI)) != -1)
         )
         {
             nCuts++;
@@ -2762,7 +2762,7 @@ void Foam::newCellCuts::check() const
             if
             (
                 !isEdge(cut)
-             && findIndex(anchors, getVertex(cut)) != -1
+             && anchors.find(getVertex(cut)) != -1
             )
             {
                 FatalErrorInFunction

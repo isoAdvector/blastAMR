@@ -271,7 +271,7 @@ void Foam::hexRefData::sync(const IOobject& io)
     {
         // Get master length
         scalar masterLen = level0EdgePtr_().value();
-        Pstream::scatter(masterLen);
+        Pstream::broadcast(masterLen);
         if (!level0EdgePtr_.valid())
         {
             IOobject rio(io);

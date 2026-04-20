@@ -151,7 +151,7 @@ Foam::fvMeshPolyRefiner::fvMeshPolyRefiner(fvMesh& mesh)
             // 3D isotropic refinement
             Info<< "3D case detected. "
                 << "Adding polyhedralRefinement topology modifier" << endl;
-            refiner_.set
+            refiner_.reset
             (
                 new polyhedralRefinement
                 (
@@ -166,7 +166,7 @@ Foam::fvMeshPolyRefiner::fvMeshPolyRefiner(fvMesh& mesh)
             // 2D isotropic refinement
             Info<< "2D case detected. "
                 << "Adding prismatic2DRefinement topology modifier" << endl;
-            refiner_.set
+            refiner_.reset
             (
                 new prismatic2DRefinement
                 (
@@ -281,7 +281,7 @@ Foam::fvMeshPolyRefiner::fvMeshPolyRefiner
             // 3D isotropic refinement
             Info<< "3D case detected. "
                 << "Adding polyhedralRefinement topology modifier" << endl;
-            refiner_.set
+            refiner_.reset
             (
                 new polyhedralRefinement
                 (
@@ -298,7 +298,7 @@ Foam::fvMeshPolyRefiner::fvMeshPolyRefiner
             // 2D isotropic refinement
             Info<< "2D case detected. "
                 << "Adding prismatic2DRefinement topology modifier" << endl;
-            refiner_.set
+            refiner_.reset
             (
                 new prismatic2DRefinement
                 (

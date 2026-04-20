@@ -308,7 +308,7 @@ void Foam::meshTools::checkInternalOrientation
     // Get compact points
     const pointField compactPoints(meshMod.points(), newFace);
 
-    const vector n(compactFace.normal(compactPoints));
+    const vector n(compactFace.areaNormal(compactPoints));
     const vector dir(neiPt - ownPt);
 
     // Check orientation error
@@ -368,7 +368,7 @@ void Foam::meshTools::checkBoundaryOrientation
     face compactFace(identity(newFace.size()));
     pointField compactPoints(meshMod.points(), newFace);
 
-    vector n(compactFace.normal(compactPoints));
+    vector n(compactFace.areaNormal(compactPoints));
 
     vector dir(boundaryPt - ownPt);
 

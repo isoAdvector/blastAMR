@@ -38,7 +38,7 @@ SourceFiles
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #include "errorEstimator.H"
-#include "NamedEnum.H"
+#include "Enum.H"
 
 namespace Foam
 {
@@ -62,7 +62,7 @@ public:
         CHARACTERISTIC,
         MAG
     };
-    static const NamedEnum<SizeType, 4> sizeTypeNames;
+    static const Foam::Enum<SizeType> sizeTypeNames;
 
 
 private:

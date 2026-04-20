@@ -266,7 +266,7 @@ void Foam::prismatic2DRefinement::setNewFaceNeighbours
 
         // Find point in the local faces addressing
         const face& f = mesh_.faces()[faceI];
-        const label fpI = findIndex(f, pointI);
+        const label fpI = f.find(pointI);
 
         if (fpI == -1)
         {
@@ -344,7 +344,7 @@ void Foam::prismatic2DRefinement::setNewFaceNeighbours
 
             // Find point in the local faces addressing
             const face& f = mesh_.faces()[faceI];
-            const label fpI = findIndex(f, pointI);
+            const label fpI = f.find(pointI);
 
             if (fpI == -1)
             {
@@ -1348,7 +1348,7 @@ void Foam::prismatic2DRefinement::setRefinement
                     const label& pointI = f[fpI];
 
                     // Find anchor point in local list if present
-                    const label anchorI = findIndex(cAnchors, pointI);
+                    const label anchorI = cAnchors.find(pointI);
 
                     if (anchorI != -1)
                     {
@@ -1858,7 +1858,7 @@ void Foam::prismatic2DRefinement::setRefinement
 
                                 // Found local index of the point,
                                 // mask it
-                                visitedPoint[findIndex(f, pointJ)] = true;
+                                visitedPoint[f.find(pointJ)] = true;
                             }
                         }
                     }
@@ -1907,11 +1907,11 @@ void Foam::prismatic2DRefinement::setRefinement
                     {
                         vector nOrig
                         (
-                            mesh_.faces()[faceI].normal(mesh_.points())
+                            mesh_.faces()[faceI].areaNormal(mesh_.points())
                         );
                         vector nNew
                         (
-                            face(identity(newFace.size())).normal
+                            face(identity(newFace.size())).areaNormal
                             (
                                 pointField(meshMod.points(), newFace)
                             )
@@ -2151,7 +2151,7 @@ void Foam::prismatic2DRefinement::setRefinement
 
                 // If this point is not an anchor, it has already been handled
                 // (by going through anchors), skip
-                if (findIndex(cAnchors, pointI) == -1)
+                if (cAnchors.find(pointI) == -1)
                 {
                     continue;
                 }
@@ -2194,7 +2194,7 @@ void Foam::prismatic2DRefinement::setRefinement
 
                 // Whether the other point is anchor or not
                 const bool isOtherEdgePointAnchor
-                    = findIndex(cAnchors, pointJ) > -1;
+                    = cAnchors.find(pointJ) > -1;
 
                 // Check if the edge is split and whether the other edge point
                 // is an anchor

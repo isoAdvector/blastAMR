@@ -74,7 +74,7 @@ Foam::label Foam::hexRef3D::getAnchorCell
 {
     if (cellAnchorPoints[celli].size())
     {
-        label index = findIndex(cellAnchorPoints[celli], pointi);
+        label index = cellAnchorPoints[celli].find(pointi);
 
         if (index != -1)
         {
@@ -89,7 +89,7 @@ Foam::label Foam::hexRef3D::getAnchorCell
 
         forAll(f, fp)
         {
-            label index = findIndex(cellAnchorPoints[celli], f[fp]);
+            label index = cellAnchorPoints[celli].find(f[fp]);
 
             if (index != -1)
             {

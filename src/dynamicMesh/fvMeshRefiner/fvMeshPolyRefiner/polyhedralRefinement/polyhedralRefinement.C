@@ -333,7 +333,7 @@ Foam::label Foam::polyhedralRefinement::getAnchorCell
 
     if (cellAnchorPoints[cellI].size() > 0)
     {
-        const label index = findIndex(cellAnchorPoints[cellI], pointI);
+        const label index = cellAnchorPoints[cellI].find(pointI);
 
         if (index != -1)
         {
@@ -347,7 +347,7 @@ Foam::label Foam::polyhedralRefinement::getAnchorCell
 
         forAll(f, fp)
         {
-            const label index = findIndex(cellAnchorPoints[cellI], f[fp]);
+            const label index = cellAnchorPoints[cellI].find(f[fp]);
 
             if (index != -1)
             {

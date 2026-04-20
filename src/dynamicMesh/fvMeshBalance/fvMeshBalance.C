@@ -88,7 +88,7 @@ Foam::fvMeshBalance::fvMeshBalance(fvMesh& mesh)
         )
     ),
     modified_(false),
-    constraintsDict_(decompositionDict_.subDictPtr("constraints")),
+    constraintsDict_(decompositionDict_.findDict("constraints")),
     //preserveFaceZonesDict_(nullptr),
     //singleProcessorFaceSetsDict_(nullptr),
     //preservePatchesDict_(nullptr),
@@ -100,7 +100,7 @@ Foam::fvMeshBalance::fvMeshBalance(fvMesh& mesh)
     if (!constraintsDict_)
     {
         decompositionDict_.add("constraints", dictionary());
-        constraintsDict_ = decompositionDict_.subDictPtr("constraints");
+        constraintsDict_ = decompositionDict_.findDict("constraints");
     }
     else
     {
@@ -159,7 +159,7 @@ Foam::fvMeshBalance::fvMeshBalance
         )
     ),
     modified_(false),
-    constraintsDict_(decompositionDict_.subDictPtr("constraints")),
+    constraintsDict_(decompositionDict_.findDict("constraints")),
     //preserveFaceZonesDict_(nullptr),
     //singleProcessorFaceSetsDict_(nullptr),
     //preservePatchesDict_(nullptr),
@@ -171,7 +171,7 @@ Foam::fvMeshBalance::fvMeshBalance
     if (!constraintsDict_)
     {
         decompositionDict_.add("constraints", dictionary());
-        constraintsDict_ = decompositionDict_.subDictPtr("constraints");
+        constraintsDict_ = decompositionDict_.findDict("constraints");
     }
     else
     {
@@ -291,7 +291,7 @@ void Foam::fvMeshBalance::addConstraint(const word& dictName, const dictionary& 
 //    if (!preserveFaceZonesDict_)
 //    {
 //        constraintsDict_->add("faceZones", dictionary());
-//        preserveFaceZonesDict_ = constraintsDict_->subDictPtr("faceZones");
+//        preserveFaceZonesDict_ = constraintsDict_->findDict("faceZones");
 //        preserveFaceZonesDict_->set
 //        (
 //            "type",
@@ -336,7 +336,7 @@ void Foam::fvMeshBalance::addConstraint(const word& dictName, const dictionary& 
 //    //{
 //    //    constraintsDict_->add("singleProcessorFaceSets", dictionary());
 //    //    singleProcessorFaceSetsDict_ =
-//    //        constraintsDict_->subDictPtr("singleProcessorFaceSets");
+//    //        constraintsDict_->findDict("singleProcessorFaceSets");
 //    //    singleProcessorFaceSetsDict_->set
 //    //    (
 //    //        "type",
@@ -384,7 +384,7 @@ void Foam::fvMeshBalance::addConstraint(const word& dictName, const dictionary& 
 //    if (!preservePatchesDict_)
 //    {
 //        constraintsDict_->add("patches", dictionary());
-//        preservePatchesDict_ = constraintsDict_->subDictPtr("patches");
+//        preservePatchesDict_ = constraintsDict_->findDict("patches");
 //        preservePatchesDict_->set
 //        (
 //            "type",
@@ -425,7 +425,7 @@ void Foam::fvMeshBalance::addConstraint(const word& dictName, const dictionary& 
 //    {
 //        modified_ = true;
 //        constraintsDict_->add("baffles", dictionary());
-//        preserveBafflesDict_ = constraintsDict_->subDictPtr("baffles");
+//        preserveBafflesDict_ = constraintsDict_->findDict("baffles");
 //        preserveBafflesDict_->set
 //        (
 //            "type",

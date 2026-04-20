@@ -281,7 +281,7 @@ Foam::label Foam::hexRefRefinementHistory::allocateSplitCell
     {
         splitCell8& parentSplit = splitCells_[parent];
 
-        if (parentSplit.addedCellsPtr_.empty())
+        if (!parentSplit.addedCellsPtr_)
         {
             // Allocate storage on parent for the 8 subcells.
             parentSplit.addedCellsPtr_.reset(new FixedList<label, 8>(-1));
@@ -312,7 +312,7 @@ void Foam::hexRefRefinementHistory::freeSplitCell(const label index)
         {
             FixedList<label, 8>& subCells = subCellsPtr();
 
-            label myPos = findIndex(subCells, index);
+            label myPos = subCells.find(index);
 
             if (myPos == -1)
             {
@@ -1564,7 +1564,7 @@ void Foam::hexRefRefinementHistory::compact()
         else if
         (
             splitCells_[index].parent_ == -1
-         && splitCells_[index].addedCellsPtr_.empty()
+         && !splitCells_[index].addedCellsPtr_
         )
         {
             // recombined cell. No need to keep since no parent and no subsplits

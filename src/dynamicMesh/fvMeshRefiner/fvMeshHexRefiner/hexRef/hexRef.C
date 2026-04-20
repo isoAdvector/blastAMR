@@ -184,7 +184,7 @@ Foam::scalar Foam::hexRef::getLevel0EdgeLength() const
     // Get the minimum per level over all processors. Note minimum so if
     // cells are not cubic we use the smallest edge side.
     Pstream::listCombineGather(typEdgeLenSqr, minEqOp<scalar>());
-    Pstream::listCombineScatter(typEdgeLenSqr);
+    Pstream::broadcast(typEdgeLenSqr);
 
     if (debug)
     {
@@ -219,7 +219,7 @@ Foam::scalar Foam::hexRef::getLevel0EdgeLength() const
     }
 
     Pstream::listCombineGather(maxEdgeLenSqr, maxEqOp<scalar>());
-    Pstream::listCombineScatter(maxEdgeLenSqr);
+    Pstream::broadcast(maxEdgeLenSqr);
 
     if (debug)
     {
@@ -293,7 +293,7 @@ Foam::label Foam::hexRef::getAnchorCell
 {
     if (cellAnchorPoints[celli].size())
     {
-        label index = findIndex(cellAnchorPoints[celli], pointi);
+        label index = cellAnchorPoints[celli].find(pointi);
 
         if (index != -1)
         {
@@ -308,7 +308,7 @@ Foam::label Foam::hexRef::getAnchorCell
 
         forAll(f, fp)
         {
-            label index = findIndex(cellAnchorPoints[celli], f[fp]);
+            label index = cellAnchorPoints[celli].find(f[fp]);
 
             if (index != -1)
             {
@@ -985,7 +985,7 @@ bool Foam::hexRef::matchHexShape
                         if (iter != pointFaces.end())
                         {
                             labelList& pFaces = iter();
-                            if (findIndex(pFaces, facei) == -1)
+                            if (pFaces.find(facei) == -1)
                             {
                                 pFaces.append(facei);
                             }
@@ -2264,12 +2264,12 @@ void Foam::hexRef::updateMesh
             cellLevel_[newCelli] = fnd();
         }
 
-        //if (findIndex(cellLevel_, -1) != -1)
+        //if (cellLevel_.find(-1) != -1)
         //{
         //    WarningInFunction
         //        << "Problem : "
         //        << "cellLevel_ contains illegal value -1 after mapping
-        //        << " at cell " << findIndex(cellLevel_, -1) << endl
+        //        << " at cell " << cellLevel_.find(-1) << endl
         //        << "This means that another program has inflated cells"
         //        << " (created cells out-of-nothing) and hence we don't know"
         //        << " their cell level. Continuing with illegal value."
@@ -2338,12 +2338,12 @@ void Foam::hexRef::updateMesh
             pointLevel_[newPointi] = fnd();
         }
 
-        //if (findIndex(pointLevel_, -1) != -1)
+        //if (pointLevel_.find(-1) != -1)
         //{
         //    WarningInFunction
         //        << "Problem : "
         //        << "pointLevel_ contains illegal value -1 after mapping"
-        //        << " at point" << findIndex(pointLevel_, -1) << endl
+        //        << " at point" << pointLevel_.find(-1) << endl
         //        << "This means that another program has inflated points"
         //        << " (created points out-of-nothing) and hence we don't know"
         //        << " their point level. Continuing with illegal value."
@@ -2404,7 +2404,7 @@ void Foam::hexRef::subset
 
         cellLevel_.transfer(newCellLevel);
 
-        if (findIndex(cellLevel_, -1) != -1)
+        if (cellLevel_.find(-1) != -1)
         {
             FatalErrorInFunction
                 << "Problem : "
@@ -2425,7 +2425,7 @@ void Foam::hexRef::subset
 
         pointLevel_.transfer(newPointLevel);
 
-        if (findIndex(pointLevel_, -1) != -1)
+        if (pointLevel_.find(-1) != -1)
         {
             FatalErrorInFunction
                 << "Problem : "
@@ -2946,7 +2946,7 @@ void Foam::hexRef::checkRefinementLevels
 
 const Foam::cellShapeList& Foam::hexRef::cellShapes() const
 {
-    if (cellShapesPtr_.empty())
+    if (!cellShapesPtr_)
     {
         if (debug)
         {

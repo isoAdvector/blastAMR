@@ -71,7 +71,7 @@ void Foam::meshSizeObject::calcDx() const
             << abort(FatalError);
     }
 
-    dxPtr_.set(new scalarField(mesh_.nCells(), 0.0));
+    dxPtr_.reset(new scalarField(mesh_.nCells(), 0.0));
     scalarField& dx = dxPtr_();
     const Vector<label>& geoD = mesh_.geometricD();
 
@@ -139,7 +139,7 @@ void Foam::meshSizeObject::calcDX() const
             <<"dX already set"
             << abort(FatalError);
     }
-    dXPtr_.set(new vectorField(mesh_.nCells(), vector::one));
+    dXPtr_.reset(new vectorField(mesh_.nCells(), vector::one));
     vectorField& dX = dXPtr_();
 
     const cellList& cells = mesh_.cells();

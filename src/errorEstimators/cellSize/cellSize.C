@@ -38,17 +38,14 @@ namespace errorEstimators
 }
 }
 
-template<>
-const char* Foam::NamedEnum<Foam::errorEstimators::cellSize::SizeType, 4>::names[] =
+const Foam::Enum<Foam::errorEstimators::cellSize::SizeType>
+Foam::errorEstimators::cellSize::sizeTypeNames
 {
-    "volume",
-    "cmpt",
-    "characteristic",
-    "mag"
+    { Foam::errorEstimators::cellSize::SizeType::VOLUME,         "volume" },
+    { Foam::errorEstimators::cellSize::SizeType::CMPT,           "cmpt" },
+    { Foam::errorEstimators::cellSize::SizeType::CHARACTERISTIC, "characteristic" },
+    { Foam::errorEstimators::cellSize::SizeType::MAG,            "mag" }
 };
-
-const Foam::NamedEnum<Foam::errorEstimators::cellSize::SizeType, 4>
-Foam::errorEstimators::cellSize::sizeTypeNames;
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //

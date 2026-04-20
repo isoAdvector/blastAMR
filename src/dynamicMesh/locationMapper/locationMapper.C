@@ -64,11 +64,11 @@ void Foam::locationMapper::addSplitEdges
 
     if (!pointsOldPtr_.valid())
     {
-        pointsOldPtr_.set(new pointField(mesh_.points()));
+        pointsOldPtr_.reset(new pointField(mesh_.points()));
     }
     if (!edgesOldPtr_.valid())
     {
-        edgesOldPtr_.set(new edgeList(mesh_.edges()));
+        edgesOldPtr_.reset(new edgeList(mesh_.edges()));
     }
 
     labelList newPoints(splitEdges.size(), -1);
@@ -95,11 +95,11 @@ void Foam::locationMapper::addSplitFaces
 
     if (!pointsOldPtr_.valid())
     {
-        pointsOldPtr_.set(new pointField(mesh_.points()));
+        pointsOldPtr_.reset(new pointField(mesh_.points()));
     }
     if (!facesOldPtr_.valid())
     {
-        facesOldPtr_.set(new faceList(mesh_.faces()));
+        facesOldPtr_.reset(new faceList(mesh_.faces()));
     }
 
     labelList newPoints(splitFaces.size(), -1);
@@ -126,15 +126,15 @@ void Foam::locationMapper::addSplitCells
 
     if (!pointsOldPtr_.valid())
     {
-        pointsOldPtr_.set(new pointField(mesh_.points()));
+        pointsOldPtr_.reset(new pointField(mesh_.points()));
     }
     if (!facesOldPtr_.valid())
     {
-        facesOldPtr_.set(new faceList(mesh_.faces()));
+        facesOldPtr_.reset(new faceList(mesh_.faces()));
     }
     if (!cellsOldPtr_.valid())
     {
-        cellsOldPtr_.set(new cellList(mesh_.cells()));
+        cellsOldPtr_.reset(new cellList(mesh_.cells()));
     }
 
     labelList newPoints(splitCells.size(), -1);
@@ -156,7 +156,7 @@ Foam::locationMapper::edgeWeights() const
         return edgeWeightsPtr_();
     }
 
-    edgeWeightsPtr_.set(new scalarListList(edgeSplits_.size()));
+    edgeWeightsPtr_.reset(new scalarListList(edgeSplits_.size()));
     scalarListList& edgeWs(edgeWeightsPtr_());
 
     const pointField& pointsOld(pointsOldPtr_());
@@ -187,7 +187,7 @@ Foam::locationMapper::faceWeights() const
         return faceWeightsPtr_();
     }
 
-    faceWeightsPtr_.set(new scalarListList(faceSplits_.size()));
+    faceWeightsPtr_.reset(new scalarListList(faceSplits_.size()));
     scalarListList& faceWs(faceWeightsPtr_());
 
     const pointField& pointsOld(pointsOldPtr_());
@@ -218,7 +218,7 @@ Foam::locationMapper::cellWeights() const
         return cellWeightsPtr_();
     }
 
-    cellWeightsPtr_.set(new scalarListList(cellSplits_.size()));
+    cellWeightsPtr_.reset(new scalarListList(cellSplits_.size()));
     scalarListList& cellWs(cellWeightsPtr_());
 
     const pointField& pointsOld(pointsOldPtr_());

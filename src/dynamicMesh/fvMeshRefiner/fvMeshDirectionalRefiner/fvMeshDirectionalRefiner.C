@@ -192,7 +192,7 @@ void Foam::fvMeshDirectionalRefiner::addCells
             added[0] = masterI;
             added[1] = newCelli;
         }
-        else if (findIndex(added, newCelli) == -1)
+        else if (added.find(newCelli) == -1)
         {
             label sz = added.size();
             added.setSize(sz + 1);
