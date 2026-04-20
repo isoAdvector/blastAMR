@@ -19,7 +19,7 @@ libs
 (
     libamrDynamicFvMesh.so
     libamrIndicators.so
-    libamrDynamicMesh.so
+    libamrCPULoad.so
 );
 
 application     interFoam;
@@ -61,5 +61,9 @@ maxAlphaCo      1;
 maxDeltaT       1;
 
 //#sinclude   "sampling"
+functions
+{
+    #include "sampling"
+}
 
 // ************************************************************************* //

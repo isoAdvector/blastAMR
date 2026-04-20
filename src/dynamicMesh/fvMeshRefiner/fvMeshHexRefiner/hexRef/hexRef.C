@@ -709,20 +709,20 @@ Foam::label Foam::hexRef::faceConsistentRefinement
     for (label facei = 0; facei < mesh_.nInternalFaces(); facei++)
     {
         label own = mesh_.faceOwner()[facei];
-        label ownLevel = cellLevel_[own] + refineCell.get(own);
+        label ownLevel = cellLevel_[own] + refineCell[own];
 
         label nei = mesh_.faceNeighbour()[facei];
-        label neiLevel = cellLevel_[nei] + refineCell.get(nei);
+        label neiLevel = cellLevel_[nei] + refineCell[nei];
 
         if (ownLevel > (neiLevel+1))
         {
             if (maxSet)
             {
-                refineCell.set(nei);
+                refineCell.set(nei, true);
             }
             else
             {
-                refineCell.unset(own);
+                refineCell.set(own, false);
             }
             nChanged++;
         }
@@ -730,11 +730,11 @@ Foam::label Foam::hexRef::faceConsistentRefinement
         {
             if (maxSet)
             {
-                refineCell.set(own);
+                refineCell.set(own, true);
             }
             else
             {
-                refineCell.unset(nei);
+                refineCell.set(nei, false);
             }
             nChanged++;
         }
@@ -749,7 +749,7 @@ Foam::label Foam::hexRef::faceConsistentRefinement
     {
         label own = mesh_.faceOwner()[i+mesh_.nInternalFaces()];
 
-        neiLevel[i] = cellLevel_[own] + refineCell.get(own);
+        neiLevel[i] = cellLevel_[own] + refineCell[own];
     }
 
     // Swap to neighbour
@@ -759,13 +759,13 @@ Foam::label Foam::hexRef::faceConsistentRefinement
     forAll(neiLevel, i)
     {
         label own = mesh_.faceOwner()[i+mesh_.nInternalFaces()];
-        label ownLevel = cellLevel_[own] + refineCell.get(own);
+        label ownLevel = cellLevel_[own] + refineCell[own];
 
         if (ownLevel > (neiLevel[i]+1))
         {
             if (!maxSet)
             {
-                refineCell.unset(own);
+                refineCell.set(own, false);
                 nChanged++;
             }
         }
@@ -773,7 +773,7 @@ Foam::label Foam::hexRef::faceConsistentRefinement
         {
             if (maxSet)
             {
-                refineCell.set(own);
+                refineCell.set(own, true);
                 nChanged++;
             }
         }
@@ -789,19 +789,19 @@ void Foam::hexRef::checkWantedRefinementLevels
     const labelList& cellsToRefine
 ) const
 {
-    boolList refineCell(mesh_.nCells());
+    boolList refineCell(mesh_.nCells(), false);
     forAll(cellsToRefine, i)
     {
-        refineCell.set(cellsToRefine[i]);
+        refineCell.set(cellsToRefine[i], true);
     }
 
     for (label facei = 0; facei < mesh_.nInternalFaces(); facei++)
     {
         label own = mesh_.faceOwner()[facei];
-        label ownLevel = cellLevel_[own] + refineCell.get(own);
+        label ownLevel = cellLevel_[own] + refineCell[own];
 
         label nei = mesh_.faceNeighbour()[facei];
-        label neiLevel = cellLevel_[nei] + refineCell.get(nei);
+        label neiLevel = cellLevel_[nei] + refineCell[nei];
 
         if (mag(ownLevel-neiLevel) > 1)
         {
@@ -829,7 +829,7 @@ void Foam::hexRef::checkWantedRefinementLevels
     {
         label own = mesh_.faceOwner()[i+mesh_.nInternalFaces()];
 
-        neiLevel[i] = cellLevel_[own] + refineCell.get(own);
+        neiLevel[i] = cellLevel_[own] + refineCell[own];
     }
 
     // Swap to neighbour
@@ -841,7 +841,7 @@ void Foam::hexRef::checkWantedRefinementLevels
         label facei = i + mesh_.nInternalFaces();
 
         label own = mesh_.faceOwner()[facei];
-        label ownLevel = cellLevel_[own] + refineCell.get(own);
+        label ownLevel = cellLevel_[own] + refineCell[own];
 
         if (mag(ownLevel - neiLevel[i]) > 1)
         {
@@ -1075,7 +1075,7 @@ Foam::hexRef::hexRef(const polyMesh& mesh, const bool readHistory)
             polyMesh::meshSubDir,
             mesh_,
             IOobject::READ_IF_PRESENT,
-            IOobject::NO_WRITE
+            IOobject::AUTO_WRITE
         ),
         labelList(mesh_.nCells(), 0)
     ),
@@ -1088,7 +1088,7 @@ Foam::hexRef::hexRef(const polyMesh& mesh, const bool readHistory)
             polyMesh::meshSubDir,
             mesh_,
             readHistory ? IOobject::READ_IF_PRESENT : IOobject::NO_READ,
-            IOobject::NO_WRITE
+            IOobject::AUTO_WRITE
         ),
         labelList(mesh_.nPoints(), 0)
     ),
@@ -1150,6 +1150,182 @@ Foam::hexRef::hexRef(const polyMesh& mesh, const bool readHistory)
             << abort(FatalError);
     }
 
+    // Reconstruct refinement history from cellLevel/pointLevel when the
+    // history file is missing but the mesh is already refined.
+    // Without this, cells refined by updateMesh can never be unrefined.
+    // When no history file exists, the constructor creates a default
+    // state: one splitCell8 per cell, all with parent_ == -1.
+    // Detect this by checking if any visible cell has a real parent.
+    bool hasRealHistory = false;
+    if (history_.active() && gMax(cellLevel_) > 0)
+    {
+        const labelList& visCells = history_.visibleCells();
+        const DynamicList<hexRefRefinementHistory::splitCell8>& sc =
+            history_.splitCells();
+        forAll(visCells, celli)
+        {
+            if (visCells[celli] >= 0 && sc[visCells[celli]].parent_ >= 0)
+            {
+                hasRealHistory = true;
+                break;
+            }
+        }
+        reduce(hasRealHistory, orOp<bool>());
+    }
+
+    if
+    (
+        history_.active()
+     && !hasRealHistory
+     && gMax(cellLevel_) > 0
+    )
+    {
+        Info<< "hexRef::hexRef : Reconstructing refinement history from"
+            << " cellLevel/pointLevel" << endl;
+
+        const label maxLevel = gMax(cellLevel_);
+        const label nCells = mesh_.nCells();
+        const label nFaces = mesh_.nInternalFaces();
+        const labelList& owner = mesh_.faceOwner();
+        const labelList& neighbour = mesh_.faceNeighbour();
+        const faceList& faces = mesh_.faces();
+
+        // Process each level from 1 to maxLevel.
+        // At each level, find sibling groups: cells at the same level
+        // connected through "sibling faces" (all face points have
+        // pointLevel >= cellLevel).  This distinguishes siblings from
+        // neighbours that belong to different parent cells.
+
+        for (label level = 1; level <= maxLevel; level++)
+        {
+            // Union-Find structure
+            labelList ufParent(nCells, -1);
+
+            // Initialize cells at this level
+            forAll(cellLevel_, celli)
+            {
+                if (cellLevel_[celli] == level)
+                {
+                    ufParent[celli] = celli;
+                }
+            }
+
+            // Union cells connected by sibling faces
+            for (label facei = 0; facei < nFaces; facei++)
+            {
+                const label own = owner[facei];
+                const label nei = neighbour[facei];
+
+                if
+                (
+                    cellLevel_[own] == level
+                 && cellLevel_[nei] == level
+                )
+                {
+                    // Check if ALL face points have pointLevel >= level
+                    const face& f = faces[facei];
+                    bool allHighLevel = true;
+                    forAll(f, fp)
+                    {
+                        if (pointLevel_[f[fp]] < level)
+                        {
+                            allHighLevel = false;
+                            break;
+                        }
+                    }
+
+                    if (allHighLevel)
+                    {
+                        // Sibling face — union the two cells.
+                        // Find root of own (with path compression)
+                        label rootOwn = own;
+                        while (ufParent[rootOwn] != rootOwn)
+                        {
+                            ufParent[rootOwn] =
+                                ufParent[ufParent[rootOwn]];
+                            rootOwn = ufParent[rootOwn];
+                        }
+                        // Find root of nei
+                        label rootNei = nei;
+                        while (ufParent[rootNei] != rootNei)
+                        {
+                            ufParent[rootNei] =
+                                ufParent[ufParent[rootNei]];
+                            rootNei = ufParent[rootNei];
+                        }
+
+                        if (rootOwn != rootNei)
+                        {
+                            // Attach higher root under lower so
+                            // lowest index becomes master
+                            if (rootOwn < rootNei)
+                            {
+                                ufParent[rootNei] = rootOwn;
+                            }
+                            else
+                            {
+                                ufParent[rootOwn] = rootNei;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Collect sibling groups (keyed by root = master cell)
+            Map<DynamicList<label>> groups;
+            forAll(ufParent, celli)
+            {
+                if (ufParent[celli] >= 0)
+                {
+                    // Find root with path compression
+                    label root = celli;
+                    while (ufParent[root] != root)
+                    {
+                        ufParent[root] = ufParent[ufParent[root]];
+                        root = ufParent[root];
+                    }
+
+                    if (!groups.found(root))
+                    {
+                        groups.insert(root, DynamicList<label>());
+                    }
+                    groups[root].append(celli);
+                }
+            }
+
+            // Register each sibling group in the history
+            label nGroups = 0;
+            forAllIter(Map<DynamicList<label>>, groups, iter)
+            {
+                DynamicList<label>& siblings = iter();
+
+                if (siblings.size() < 2)
+                {
+                    continue;
+                }
+
+                // Sort so master (lowest index) is first
+                Foam::sort(siblings);
+
+                // storeSplit expects: first cell = original cell,
+                // rest = added cells.  All become children of a
+                // common parent.
+                history_.storeSplit
+                (
+                    siblings[0],
+                    siblings
+                );
+                nGroups++;
+            }
+
+            if (nGroups > 0)
+            {
+                Info<< "    Level " << level << ": reconstructed "
+                    << nGroups << " sibling groups" << endl;
+            }
+        }
+    }
+
     if
     (
         cellLevel_.size() != mesh_.nCells()
@@ -1165,6 +1341,14 @@ Foam::hexRef::hexRef(const polyMesh& mesh, const bool readHistory)
             << " does not equal size of cellLevel:" << cellLevel_.size() << endl
             << "Number of points in mesh:" << mesh_.nPoints()
             << " does not equal size of pointLevel:" << pointLevel_.size()
+            << abort(FatalError);
+    }
+
+    if (gMin(cellLevel_) < -1 || gMin(pointLevel_) < -1) {
+        FatalErrorInFunction
+            << "Cell or point levels seem to be corrupt..."
+            << nl << "min(CellLevels) = " << gMin(cellLevel_)
+            << nl << "min(PointLevels) = " << gMin(pointLevel_)
             << abort(FatalError);
     }
 
@@ -1411,10 +1595,10 @@ Foam::labelList Foam::hexRef::consistentRefinement
     // maxSet = true  : select cells to refine
 
     // Go to straight boolList.
-    boolList refineCell(mesh_.nCells());
+    boolList refineCell(mesh_.nCells(), false);
     forAll(cellsToRefine, i)
     {
-        refineCell.set(cellsToRefine[i]);
+        refineCell.set(cellsToRefine[i], true);
     }
 
     while (true)
@@ -1442,7 +1626,7 @@ Foam::labelList Foam::hexRef::consistentRefinement
 
     forAll(refineCell, celli)
     {
-        if (refineCell.get(celli))
+        if (refineCell[celli])
         {
             nRefined++;
         }
@@ -1453,7 +1637,7 @@ Foam::labelList Foam::hexRef::consistentRefinement
 
     forAll(refineCell, celli)
     {
-        if (refineCell.get(celli))
+        if (refineCell[celli])
         {
             newCellsToRefine[nRefined++] = celli;
         }
@@ -1952,430 +2136,6 @@ Foam::labelList Foam::hexRef::consistentSlowRefinement
         Pout<< "hexRef::consistentSlowRefinement : From "
             << cellsToRefine.size() << " to " << newCellsToRefine.size()
             << " cells to refine." << endl;
-    }
-
-    return newCellsToRefine;
-}
-
-
-Foam::labelList Foam::hexRef::consistentSlowRefinement2
-(
-    const label maxFaceDiff,
-    const labelList& cellsToRefine,
-    const labelList& facesToCheck
-) const
-{
-    const labelList& faceOwner = mesh_.faceOwner();
-    const labelList& faceNeighbour = mesh_.faceNeighbour();
-
-    if (maxFaceDiff <= 0)
-    {
-        FatalErrorInFunction
-            << "Illegal maxFaceDiff " << maxFaceDiff << nl
-            << "Value should be >= 1" << exit(FatalError);
-    }
-
-    const scalar level0Size = 2*maxFaceDiff*level0EdgeLength();
-
-
-    // Bit tricky. Say we want a distance of three cells between two
-    // consecutive refinement levels. This is done by using FaceCellWave to
-    // transport out the 'refinement shell'. Anything inside the refinement
-    // shell (given by a distance) gets marked for refinement.
-
-    // Initial information about (distance to) cellLevel on all cells
-    List<refinementDistanceData> allCellInfo(mesh_.nCells());
-
-    // Initial information about (distance to) cellLevel on all faces
-    List<refinementDistanceData> allFaceInfo(mesh_.nFaces());
-
-    // Dummy additional info for FaceCellWave
-    int dummyTrackData = 0;
-
-
-    // Mark cells with wanted refinement level
-    forAll(cellsToRefine, i)
-    {
-        label celli = cellsToRefine[i];
-
-        allCellInfo[celli] = refinementDistanceData
-        (
-            level0Size,
-            mesh_.cellCentres()[celli],
-            cellLevel_[celli]+1             // wanted refinement
-        );
-    }
-    // Mark all others with existing refinement level
-    forAll(allCellInfo, celli)
-    {
-        if (!allCellInfo[celli].valid(dummyTrackData))
-        {
-            allCellInfo[celli] = refinementDistanceData
-            (
-                level0Size,
-                mesh_.cellCentres()[celli],
-                cellLevel_[celli]           // wanted refinement
-            );
-        }
-    }
-
-
-    // Labels of seed faces
-    DynamicList<label> seedFaces(mesh_.nFaces()/100);
-    // refinementLevel data on seed faces
-    DynamicList<refinementDistanceData> seedFacesInfo(mesh_.nFaces()/100);
-
-    const pointField& cc = mesh_.cellCentres();
-
-    forAll(facesToCheck, i)
-    {
-        label facei = facesToCheck[i];
-
-        if (allFaceInfo[facei].valid(dummyTrackData))
-        {
-            // Can only occur if face has already gone through loop below.
-            FatalErrorInFunction
-                << "Argument facesToCheck seems to have duplicate entries!"
-                << endl
-                << "face:" << facei << " occurs at positions "
-                << findIndices(facesToCheck, facei)
-                << abort(FatalError);
-        }
-
-        label own = faceOwner[facei];
-
-        label ownLevel =
-        (
-            allCellInfo[own].valid(dummyTrackData)
-          ? allCellInfo[own].originLevel()
-          : cellLevel_[own]
-        );
-
-        if (!mesh_.isInternalFace(facei))
-        {
-            // Do as if boundary face would have neighbour with one higher
-            // refinement level.
-            const point& fc = mesh_.faceCentres()[facei];
-
-            refinementDistanceData neiData
-            (
-                level0Size,
-                2*fc - cc[own],    // est'd cell centre
-                ownLevel+1
-            );
-
-            allFaceInfo[facei].updateFace
-            (
-                mesh_,
-                facei,
-                own,        // not used (should be nei)
-                neiData,
-                FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                dummyTrackData
-            );
-        }
-        else
-        {
-            label nei = faceNeighbour[facei];
-
-            label neiLevel =
-            (
-                allCellInfo[nei].valid(dummyTrackData)
-              ? allCellInfo[nei].originLevel()
-              : cellLevel_[nei]
-            );
-
-            if (ownLevel == neiLevel)
-            {
-                // Fake as if nei>own or own>nei (whichever one 'wins')
-                allFaceInfo[facei].updateFace
-                (
-                    mesh_,
-                    facei,
-                    nei,
-                    refinementDistanceData(level0Size, cc[nei], neiLevel+1),
-                    FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                    dummyTrackData
-                );
-                allFaceInfo[facei].updateFace
-                (
-                    mesh_,
-                    facei,
-                    own,
-                    refinementDistanceData(level0Size, cc[own], ownLevel+1),
-                    FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                    dummyTrackData
-                );
-            }
-            else
-            {
-                // Difference in level anyway.
-                allFaceInfo[facei].updateFace
-                (
-                    mesh_,
-                    facei,
-                    nei,
-                    refinementDistanceData(level0Size, cc[nei], neiLevel),
-                    FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                    dummyTrackData
-                );
-                allFaceInfo[facei].updateFace
-                (
-                    mesh_,
-                    facei,
-                    own,
-                    refinementDistanceData(level0Size, cc[own], ownLevel),
-                    FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                    dummyTrackData
-                );
-            }
-        }
-        seedFaces.append(facei);
-        seedFacesInfo.append(allFaceInfo[facei]);
-    }
-
-
-    // Create some initial seeds to start walking from. This is only if there
-    // are no facesToCheck.
-    // Just seed with all faces inbetween different refinement levels for now
-    forAll(faceNeighbour, facei)
-    {
-        // Check if face already handled in loop above
-        if (!allFaceInfo[facei].valid(dummyTrackData))
-        {
-            label own = faceOwner[facei];
-
-            label ownLevel =
-            (
-                allCellInfo[own].valid(dummyTrackData)
-              ? allCellInfo[own].originLevel()
-              : cellLevel_[own]
-            );
-
-            label nei = faceNeighbour[facei];
-
-            label neiLevel =
-            (
-                allCellInfo[nei].valid(dummyTrackData)
-              ? allCellInfo[nei].originLevel()
-              : cellLevel_[nei]
-            );
-
-            if (ownLevel > neiLevel)
-            {
-                // Set face to owner data. (since face not yet would be copy)
-                seedFaces.append(facei);
-                allFaceInfo[facei].updateFace
-                (
-                    mesh_,
-                    facei,
-                    own,
-                    refinementDistanceData(level0Size, cc[own], ownLevel),
-                    FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                    dummyTrackData
-                );
-                seedFacesInfo.append(allFaceInfo[facei]);
-            }
-            else if (neiLevel > ownLevel)
-            {
-                seedFaces.append(facei);
-                allFaceInfo[facei].updateFace
-                (
-                    mesh_,
-                    facei,
-                    nei,
-                    refinementDistanceData(level0Size, cc[nei], neiLevel),
-                    FaceCellWave<refinementDistanceData, int>::propagationTol(),
-                    dummyTrackData
-                );
-                seedFacesInfo.append(allFaceInfo[facei]);
-            }
-        }
-    }
-
-    seedFaces.shrink();
-    seedFacesInfo.shrink();
-
-    // face-cell-face transport engine
-    FaceCellWave<refinementDistanceData, int> levelCalc
-    (
-        mesh_,
-        seedFaces,
-        seedFacesInfo,
-        allFaceInfo,
-        allCellInfo,
-        mesh_.globalData().nTotalCells()+1,
-        dummyTrackData
-    );
-
-
-    //if (debug)
-    //{
-    //    // Dump wanted level
-    //    volScalarField wantedLevel
-    //    (
-    //        IOobject
-    //        (
-    //            "wantedLevel",
-    //            fMesh.time().timeName(),
-    //            fMesh,
-    //            IOobject::NO_READ,
-    //            IOobject::NO_WRITE,
-    //            false
-    //        ),
-    //        fMesh,
-    //        dimensionedScalar("zero", dimless, 0)
-    //    );
-    //
-    //    forAll(wantedLevel, celli)
-    //    {
-    //        wantedLevel[celli] = allCellInfo[celli].wantedLevel(cc[celli]);
-    //    }
-    //
-    //    Pout<< "Writing " << wantedLevel.objectPath() << endl;
-    //    wantedLevel.write();
-    //}
-
-
-    // Convert back to labelList of cells to refine.
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    // 1. Force original refinement cells to be picked up by setting the
-    // originLevel of input cells to be a very large level (but within range
-    // of 1<< shift inside refinementDistanceData::wantedLevel)
-    forAll(cellsToRefine, i)
-    {
-        label celli = cellsToRefine[i];
-
-        allCellInfo[celli].originLevel() = sizeof(label)*8-2;
-        allCellInfo[celli].origin() = cc[celli];
-    }
-
-    // 2. Extend to 2:1. I don't understand yet why this is not done
-    // 2. Extend to 2:1. For non-cube cells the scalar distance does not work
-    // so make sure it at least provides 2:1.
-    boolList refineCell(mesh_.nCells());
-    forAll(allCellInfo, celli)
-    {
-        label wanted = allCellInfo[celli].wantedLevel(cc[celli]);
-
-        if (wanted > cellLevel_[celli]+1)
-        {
-            refineCell.set(celli);
-        }
-    }
-    faceConsistentRefinement(true, refineCell);
-
-    while (true)
-    {
-        label nChanged = faceConsistentRefinement(true, refineCell);
-
-        reduce(nChanged, sumOp<label>());
-
-        if (debug)
-        {
-            Pout<< "hexRef::consistentSlowRefinement2 : Changed " << nChanged
-                << " refinement levels due to 2:1 conflicts."
-                << endl;
-        }
-
-        if (nChanged == 0)
-        {
-            break;
-        }
-    }
-
-    // 3. Convert back to labelList.
-    label nRefined = 0;
-
-    forAll(refineCell, celli)
-    {
-//        if (refineCell.get(celli))
-        if (refineCell[celli])
-        {
-            nRefined++;
-        }
-    }
-
-    labelList newCellsToRefine(nRefined);
-    nRefined = 0;
-
-    forAll(refineCell, celli)
-    {
-//        if (refineCell.get(celli))
-        if (refineCell[celli])
-        {
-            newCellsToRefine[nRefined++] = celli;
-        }
-    }
-
-    if (debug)
-    {
-        Pout<< "hexRef::consistentSlowRefinement2 : From "
-            << cellsToRefine.size() << " to " << newCellsToRefine.size()
-            << " cells to refine." << endl;
-
-        // Check that newCellsToRefine obeys at least 2:1.
-
-        {
-            cellSet cellsIn(mesh_, "cellsToRefineIn", cellsToRefine);
-            Pout<< "hexRef::consistentSlowRefinement2 : writing "
-                << cellsIn.size() << " to cellSet "
-                << cellsIn.objectPath() << endl;
-            cellsIn.write();
-        }
-        {
-            cellSet cellsOut(mesh_, "cellsToRefineOut", newCellsToRefine);
-            Pout<< "hexRef::consistentSlowRefinement2 : writing "
-                << cellsOut.size() << " to cellSet "
-                << cellsOut.objectPath() << endl;
-            cellsOut.write();
-        }
-
-        // Extend to 2:1
-        boolList refineCell(mesh_.nCells());
-        forAll(newCellsToRefine, i)
-        {
-            refineCell.set(newCellsToRefine[i]);
-        }
-        const boolList savedRefineCell(refineCell);
-
-        label nChanged = faceConsistentRefinement(true, refineCell);
-
-        {
-            cellSet cellsOut2
-            (
-                mesh_, "cellsToRefineOut2", newCellsToRefine.size()
-            );
-            forAll(refineCell, celli)
-            {
-                if (refineCell.get(celli))
-                {
-                    cellsOut2.insert(celli);
-                }
-            }
-            Pout<< "hexRef::consistentSlowRefinement2 : writing "
-                << cellsOut2.size() << " to cellSet "
-                << cellsOut2.objectPath() << endl;
-            cellsOut2.write();
-        }
-
-        if (nChanged > 0)
-        {
-            forAll(refineCell, celli)
-            {
-                if (refineCell.get(celli) && !savedRefineCell.get(celli))
-                {
-                    dumpCell(celli);
-                    FatalErrorInFunction
-                        << "Cell:" << celli << " cc:"
-                        << mesh_.cellCentres()[celli]
-                        << " was not marked for refinement but does not obey"
-                        << " 2:1 constraints."
-                        << abort(FatalError);
-                }
-            }
-        }
     }
 
     return newCellsToRefine;

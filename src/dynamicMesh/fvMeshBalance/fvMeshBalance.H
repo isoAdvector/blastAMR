@@ -38,6 +38,7 @@ Description
 #define fvMeshBalance_H
 
 #include "fvMeshDistribute.H"
+#include "loadPolicy.H"
 #include "mapDistributePolyMesh.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -89,14 +90,14 @@ protected:
 
         fvMeshDistribute distributor_;
 
-        //- Does the mesh get balanced
-        bool balance_;
-
-        //- Allowable imbalance
-        scalar allowableImbalance_;
+        mutable autoPtr<loadPolicy> loadPolicy_;
 
         //- Distribution
         mutable labelList distribution_;
+
+        //- Enable expiration of sampledSurface caches after mesh redistribution
+        //  This is opt-in (default false) because it uses private member access
+        bool expireSampledSurfacesOnLB_;
 
 
     // Private member functions
@@ -132,16 +133,14 @@ public:
         //- Template to update all volField boundaries
         template<class GeoField> void correctBoundaries();
 
+        //- Synchronize oldTime fields across processors before distribution
+        //  This ensures all processors have the same fields registered
+        template<class GeoField> void syncOldTimeFields();
+
         //- Is balancing enabled
         bool balance() const
         {
-            return balance_;
-        }
-
-        //- Access if balancing enabled
-        bool& balance()
-        {
-            return balance_;
+            return loadPolicy_.valid();
         }
 
         //- Does the mesh need to be balanced
