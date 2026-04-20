@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
 21-05-2020 Synthetik Applied Technologies: |   Modified original
                             dynamicRefineBalanceBlastFvMesh class
-                            to be more appilcable to compressible flows.
+                            to be more applicable to compressible flows.
                             Improved compatibility with snappyHexMesh.
 -------------------------------------------------------------------------------
 License

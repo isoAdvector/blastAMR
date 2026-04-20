@@ -45,17 +45,17 @@ Usage
     \verbatim
     errorEstimator coded;      // Model used to estimate error
     name percentOfMax;
-    
+
     code
     #{
         Info<< "---->! custom error estimator !<----" << endl;
         const auto& T = mesh_.lookupObject<volScalarField>("T");
         error_.interalField() = T.interalField();
-    
+
         const scalar min = gMin(T);
         const scalar max = gMax(T);
         const scalar range = max - min;
-    
+
         lowerRefine_ = min + 0.8*range;
         upperRefine_ = GREAT;
         lowerUnrefine_ = min + 0.8*range;

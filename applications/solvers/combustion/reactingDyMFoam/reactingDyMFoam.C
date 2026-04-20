@@ -120,9 +120,9 @@ int main(int argc, char *argv[])
             }
         }
 
- 	#include "rhoEqn.H"
-	
-	while (pimple.loop())
+            #include "rhoEqn.H"
+
+        while (pimple.loop())
         {
             #include "UEqn.H"
             #include "YEqn.H"

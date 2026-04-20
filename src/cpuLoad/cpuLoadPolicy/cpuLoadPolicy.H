@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
 21-05-2020 Synthetik Applied Technologies: |   Modified original
                             dynamicRefineBalanceBlastFvMesh class
-                            to be more appilcable to compressible flows.
+                            to be more applicable to compressible flows.
                             Improved compatibility with snappyHexMesh.
 -------------------------------------------------------------------------------
 License
@@ -38,7 +38,7 @@ Description
     ideal average (computation-related) CPU execution time per processor.
 
 Note
-    Relies on a static global for MPI profiling 
+    Relies on a static global for MPI profiling
 
 \*---------------------------------------------------------------------------*/
 

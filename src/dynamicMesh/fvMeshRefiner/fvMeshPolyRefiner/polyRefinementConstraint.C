@@ -104,12 +104,12 @@ void Foam::polyRefinementConstraint::add
             Info<< type() << " : reading fvMeshPolyRefiner from time "
                 << mesh.facesInstance() << endl;
         }
-	polyMesh& pMesh = const_cast<polyMesh&>(mesh);
+        polyMesh& pMesh = const_cast<polyMesh&>(mesh);
         storagePtr.reset
         (
             new fvMeshPolyRefiner
             (
-	     	dynamic_cast<fvMesh&>(pMesh)
+                dynamic_cast<fvMesh&>(pMesh)
             )
         );
     }

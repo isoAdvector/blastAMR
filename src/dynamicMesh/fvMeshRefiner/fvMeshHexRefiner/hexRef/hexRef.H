@@ -38,7 +38,7 @@ Authors
     Daniel Rettenmaier <rettenmaier@tu-darmstadt.de>
     Daniel Deising <deising@mma.tu-darmstadt.de>
     Changes:
-        + Corrected adressing of refined internal faces
+        + Corrected addressing of refined internal faces
 
 \*---------------------------------------------------------------------------*/
 

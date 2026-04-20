@@ -26,7 +26,7 @@ License
 // THIS IS BAD
 // The volumes need to be cleared when balancing, but there is no
 // public or protected way to do this without using clearOut() which
-// will the pointMesh if it exists, so pointFields become invalid.
+// will clear the pointMesh if it exists, so pointFields become invalid.
 // This is a work around
 #include "IOdictionary.H"
 #include "IOobject.H"
@@ -79,7 +79,7 @@ Foam::label Foam::fvMeshRefiner::count
             n++;
         }
 
-        // debug also serves to get-around Clang compiler trying to optimsie
+        // debug also serves to get-around Clang compiler trying to optimise
         // out this forAll loop under O3 optimisation
         if (debug)
         {
