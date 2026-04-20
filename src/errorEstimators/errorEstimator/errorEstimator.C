@@ -240,7 +240,7 @@ void Foam::errorEstimator::normalize(volScalarField& error)
         if (isA<probes>(funcs[i]))
         {
             const probes& p(refCast<const probes>(funcs[i]));
-            pts = p;
+            pts = p.probeModel().probeLocations();
 
         }
         //if (isA<blastProbes>(funcs[i]))
